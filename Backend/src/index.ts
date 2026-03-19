@@ -18,6 +18,8 @@ import menu               from "./routes/menu";
 import stockItems         from "./routes/stock-items";
 import ingredientCats     from "./routes/ingredient-categories";
 import rewards            from "./routes/rewards";
+import reports            from "./routes/reports";
+import employees          from "./routes/employees";
 
 const app = new Hono();
 
@@ -32,18 +34,20 @@ app.use("*", cors({
 
 app.get("/", (c) => c.json({ message: "🍰 Pastry Stock API v2.0", status: "ok" }));
 
-app.route("/api/auth",                 auth);
-app.route("/api/products",             products);
-app.route("/api/categories",           categories);
-app.route("/api/orders",               orders);
-app.route("/api/dashboard",            dashboard);
-app.route("/api/users",                users);
-app.route("/api/suppliers",            suppliers);
-app.route("/api/batches",              batches);
-app.route("/api/menu",                 menu);
-app.route("/api/stock-items",          stockItems);
+app.route("/api/auth",                  auth);
+app.route("/api/products",              products);
+app.route("/api/categories",            categories);
+app.route("/api/orders",                orders);
+app.route("/api/dashboard",             dashboard);
+app.route("/api/users",                 users);
+app.route("/api/suppliers",             suppliers);
+app.route("/api/batches",               batches);
+app.route("/api/menu",                  menu);
+app.route("/api/stock-items",           stockItems);
 app.route("/api/ingredient-categories", ingredientCats);
-app.route("/api/rewards",              rewards);
+app.route("/api/rewards",               rewards);
+app.route("/api/reports",               reports);
+app.route("/api/employees",             employees);
 
 app.notFound((c) => c.json({ success: false, error: "Route non trouvée" }, 404));
 app.onError((err, c) => {

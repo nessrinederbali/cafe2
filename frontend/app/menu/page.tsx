@@ -6,12 +6,13 @@ import { AuthProvider, useAuth } from "@/contexts/auth-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { NotificationContainer } from "@/components/notification-container"
 import { CartDialog } from "@/components/cart-dialog"
+import { OrderHistory } from "@/components/order-history"
 import { LoyaltyBadge } from "@/components/loyalty-badge"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   ChefHatIcon, PlusIcon, MinusIcon,
-  LogOutIcon, AwardIcon, ShoppingCartIcon, UserIcon,
+  LogOutIcon, AwardIcon, ShoppingCartIcon, UserIcon, ShoppingBagIcon,
 } from "lucide-react"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
@@ -87,6 +88,7 @@ function MenuContent() {
   const [cart,             setCart]             = useState<Array<{ item: any; quantity: number }>>([])
   const [showCart,         setShowCart]         = useState(false)
   const [showLoyalty,      setShowLoyalty]      = useState(false)
+  const [showOrders,       setShowOrders]       = useState(false)
 
   // Décrémenter quantity d'un article après commande
   const decrementMenuItemQuantity = async (id: string, qty: number) => {
@@ -209,6 +211,11 @@ function MenuContent() {
                   className="gap-2 border-amber-200 text-amber-900 hover:bg-amber-50">
                   <AwardIcon className="h-4 w-4" />
                   <span className="hidden sm:inline">{user.loyaltyPoints || 0} pts</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowOrders(true)}
+                  className="gap-2 border-amber-200 text-amber-900 hover:bg-amber-50">
+                  <ShoppingBagIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Mes commandes</span>
                 </Button>
                 <div className="hidden text-right sm:block">
                   <p className="text-sm font-medium text-amber-900">{user.name}</p>
@@ -386,6 +393,7 @@ function MenuContent() {
       </footer>
 
       {isAuthenticated && user && <LoyaltyBadge open={showLoyalty} onClose={() => setShowLoyalty(false)} />}
+      {isAuthenticated && user && <OrderHistory open={showOrders} onClose={() => setShowOrders(false)} />}
       <CartDialog open={showCart} onClose={() => setShowCart(false)} cart={cart} setCart={setCart} decrementMenuItemQuantity={decrementMenuItemQuantity} />
     </div>
   )
