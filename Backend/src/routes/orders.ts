@@ -1,9 +1,11 @@
+import { email } from './../../node_modules/zod/src/v4/core/regexes';
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { Order } from "../models/Order";
 import { User } from "../models/User";
 import { authMiddleware, adminMiddleware } from "../middleware/auth";
+import { sendOrderConfirmation, sendOrderStatusUpdate } from "../services/Email";
 
 type Variables = { user: any };
 const orders = new Hono<{ Variables: Variables }>();
@@ -53,6 +55,20 @@ orders.post("/", authMiddleware, zValidator("json", z.object({
     loyalty_points_earned: pointsEarned,
     loyalty_points_used:   pointsUsed,
   });
+
+  // Envoyer email confirmation (sans bloquer)
+  sendOrderConfirmation({
+    client_name:            user.name,
+    client_email:           user.email,
+    _id:                    String(order._id),
+    items:                  body.items.map(i => ({
+      product_name: i.product_name,
+      quantity:     i.quantity,
+      unit_price:   i.unit_price,
+    })),
+    total_amount:           finalTotal,
+    loyalty_points_earned:  pointsEarned,
+  }).catch(e => console.error("Email order confirmation:", e))
 
   // Mettre à jour les points de fidélité
   const updatedUser = await User.findById(user._id);
@@ -110,6 +126,17 @@ orders.patch("/:id/status", authMiddleware, adminMiddleware, zValidator("json", 
     { status: c.req.valid("json").status },
     { returnDocument: 'after' }
   );
+  if (!order) return c.json({ success: false, error: "Commande non trouvée" }, 404);
+
+  // Envoyer email statut (sans bloquer)
+  sendOrderStatusUpdate({
+    client_name:  order.client_name,
+    client_email: order.client_email,
+    _id:          String(order._id),
+    status:       order.status,
+    total_amount: order.total_amount,
+  }).catch(e => console.error("Email status update:", e))
+
   return c.json({ success: true, data: order });
 });
 

@@ -111,4 +111,24 @@ auth.put("/me", authMiddleware, zValidator("json", z.object({
   return c.json({ success: true, data: updated });
 });
 
+// ─── POST /api/auth/change-password ──────────────────────────────────────────
+auth.post("/change-password", authMiddleware, zValidator("json", z.object({
+  currentPassword: z.string().min(1),
+  newPassword:     z.string().min(6),
+})), async (c) => {
+  const user = c.get("user") as any;
+  const { currentPassword, newPassword } = c.req.valid("json");
+
+  const dbUser = await User.findById(user._id);
+  if (!dbUser) return c.json({ success: false, error: "Utilisateur non trouvé" }, 404);
+
+  const isValid = await Bun.password.verify(currentPassword, dbUser.password);
+  if (!isValid) return c.json({ success: false, error: "Mot de passe actuel incorrect" }, 400);
+
+  dbUser.password = await Bun.password.hash(newPassword);
+  await dbUser.save();
+
+  return c.json({ success: true, message: "Mot de passe modifié avec succès" });
+});
+
 export default auth;
