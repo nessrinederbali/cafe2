@@ -16,6 +16,7 @@ import { RewardsManagement } from "./rewards-management"
 import { OrdersManagement } from "./orders-management"
 import { EmployeesManagement } from "./employees-management"
 import { RapportPDF } from "./rapport-pdf"
+import { AdvancedStats } from "./advanced-stats"
 import { StockStats } from "./stock-stats"
 import { StockList } from "./stock-list"
 import { Card } from "./ui/card"
@@ -105,11 +106,12 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<"7d" | "30d">("7d")
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p?: "7d" | "30d") => {
     setLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const res   = await fetch(`${API}/api/dashboard`, {
+      const days  = (p ?? period) === "30d" ? 30 : 7
+      const res   = await fetch(`${API}/api/dashboard?days=${days}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const json = await res.json()
@@ -119,7 +121,7 @@ function DashboardContent() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [period])
 
   useEffect(() => { load() }, [load])
 
@@ -139,6 +141,7 @@ function DashboardContent() {
     }
     return result
   })()
+  // 12 mois — depuis AdvancedStats
 
   if (loading) return (
     <div className="flex items-center justify-center py-32">
@@ -153,7 +156,7 @@ function DashboardContent() {
     <div className="space-y-6">
       {/* Bouton actualiser */}
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" className="gap-2" onClick={load}>
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => load()}>
           <RefreshCwIcon className="h-4 w-4" />Actualiser les statistiques
         </Button>
         <RapportPDF />
@@ -205,9 +208,9 @@ function DashboardContent() {
             </div>
             <div className="flex gap-1">
               <Button size="sm" variant={period === "7d" ? "default" : "outline"}
-                className="h-7 px-3 text-xs" onClick={() => setPeriod("7d")}>7j</Button>
+                className="h-7 px-3 text-xs" onClick={() => { setPeriod("7d"); load("7d") }}>7j</Button>
               <Button size="sm" variant={period === "30d" ? "default" : "outline"}
-                className="h-7 px-3 text-xs" onClick={() => setPeriod("30d")}>30j</Button>
+                className="h-7 px-3 text-xs" onClick={() => { setPeriod("30d"); load("30d") }}>30j</Button>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -424,6 +427,8 @@ export function Dashboard() {
               <StockList />
               {/* Section analytics avancée */}
               <DashboardContent />
+              {/* Statistiques avancées */}
+              <AdvancedStats />
             </div>
           )}
 

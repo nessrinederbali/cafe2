@@ -27,6 +27,7 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose, isAdmin }:
     { id: "orders"    as const, label: "Commandes",         icon: ShoppingBagIcon,      adminOnly: true  },
     { id: "clients"   as const, label: "Clients & Fidélité",icon: UsersIcon,            adminOnly: true  },
     { id: "rewards"   as const, label: "Récompenses",       icon: GiftIcon,             adminOnly: true  },
+    { id: "employees" as const, label: "Employés",            icon: UserCogIcon,          adminOnly: true  },
   ]
 
   const handleNavClick = (view: NavItem) => { onViewChange(view); onClose() }

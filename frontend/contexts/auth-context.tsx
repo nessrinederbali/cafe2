@@ -29,11 +29,12 @@ interface AuthContextType {
   logout: () => void
   addLoyaltyPoints: (points: number, amount: number) => void
   updateUser: (updatedUser: User) => void
+  updateProfile: (data: { name: string; phone?: string }) => Promise<boolean>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// ─── API helper ───────────────────────────────────────────────────────────────
 async function apiFetch(path: string, options?: RequestInit, token?: string | null) {
   const res = await fetch(`${API}${path}`, {
     ...options,
@@ -47,30 +48,23 @@ async function apiFetch(path: string, options?: RequestInit, token?: string | nu
   return { ok: res.ok, data: json }
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]         = useState<User | null>(null)
+  const [user, setUser]           = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { addNotification } = useNotification()
 
-  // ─── Restore session from localStorage token ──────────────────────────────
   useEffect(() => {
     const restore = async () => {
       const token = localStorage.getItem("token")
       if (!token) { setIsLoading(false); return }
-
       const { ok, data } = await apiFetch("/api/auth/me", {}, token)
-      if (ok && data.success) {
-        setUser(mapUser(data.data))
-      } else {
-        localStorage.removeItem("token")
-      }
+      if (ok && data.success) setUser(mapUser(data.data))
+      else localStorage.removeItem("token")
       setIsLoading(false)
     }
     restore()
   }, [])
 
-  // ─── Map backend user → frontend User ────────────────────────────────────
   function mapUser(u: any): User {
     return {
       id:            String(u._id || u.id),
@@ -85,108 +79,102 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // ─── Login ────────────────────────────────────────────────────────────────
   const login = async (email: string, password: string): Promise<boolean> => {
     const { ok, data } = await apiFetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
+      method: "POST", body: JSON.stringify({ email, password }),
     })
-
     if (ok && data.success) {
       localStorage.setItem("token", data.data.token)
       setUser(mapUser(data.data.user))
       addNotification({ type: "success", title: "Connexion réussie", message: `Bienvenue, ${data.data.user.name}!` })
       return true
     }
-
     addNotification({ type: "error", title: "Erreur", message: data.error || "Email ou mot de passe incorrect" })
     return false
   }
 
-  // ─── Register ─────────────────────────────────────────────────────────────
   const register = async (email: string, password: string, name: string): Promise<boolean> => {
     const { ok, data } = await apiFetch("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ email, password, name, role: "client" }),
+      method: "POST", body: JSON.stringify({ email, password, name, role: "client" }),
     })
-
     if (ok && data.success) {
       localStorage.setItem("token", data.data.token)
       setUser(mapUser(data.data.user))
-      addNotification({
-        type: "success",
-        title: "Compte créé",
-        message: "Bienvenue dans notre programme de fidélité! 🎉",
-      })
+      addNotification({ type: "success", title: "Compte créé", message: "Bienvenue dans notre programme de fidélité! 🎉" })
       return true
     }
-
     addNotification({ type: "error", title: "Erreur", message: data.error || "Impossible de créer le compte" })
     return false
   }
 
-  // ─── Logout ───────────────────────────────────────────────────────────────
   const logout = () => {
     setUser(null)
     localStorage.removeItem("token")
     addNotification({ type: "success", title: "Déconnexion réussie" })
   }
 
-  // ─── Add loyalty points (local update + sync backend) ─────────────────────
   const addLoyaltyPoints = async (points: number, amount: number) => {
     if (!user || user.role !== "client") return
-
-    const newPoints    = (user.loyaltyPoints || 0) + points
+    const newPoints     = (user.loyaltyPoints || 0) + points
     const newTotalSpent = (user.totalSpent || 0) + amount
-
     let newTier: LoyaltyTier = "Bronze"
     if (newPoints >= 1000)     newTier = "Platinum"
     else if (newPoints >= 500) newTier = "Gold"
     else if (newPoints >= 200) newTier = "Silver"
-
     const updatedUser = { ...user, loyaltyPoints: newPoints, loyaltyTier: newTier, totalSpent: newTotalSpent }
     setUser(updatedUser)
-
-    // Sync with backend
     const token = localStorage.getItem("token")
     await apiFetch("/api/auth/me", {
-      method: "PUT",
-      body: JSON.stringify({ loyaltyPoints: newPoints, loyaltyTier: newTier }),
+      method: "PUT", body: JSON.stringify({ loyaltyPoints: newPoints, loyaltyTier: newTier }),
     }, token)
-
     if (newTier !== user.loyaltyTier) {
-      addNotification({
-        type: "success",
-        title: "Niveau amélioré!",
-        message: `Félicitations! Vous êtes passé au niveau ${newTier}! 🏆`,
-      })
+      addNotification({ type: "success", title: "Niveau amélioré!", message: `Félicitations! Vous êtes passé au niveau ${newTier}! 🏆` })
     }
   }
 
-  // ─── Update user (local only — for profile edits) ─────────────────────────
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser)
-    // Sync with backend
     const token = localStorage.getItem("token")
     apiFetch("/api/auth/me", {
-      method: "PUT",
-      body: JSON.stringify({
-        name:  updatedUser.name,
-        phone: updatedUser.phone,
-      }),
+      method: "PUT", body: JSON.stringify({ name: updatedUser.name, phone: updatedUser.phone }),
     }, token)
+  }
+
+  // ─── Nouveau: updateProfile ───────────────────────────────────────────────
+  const updateProfile = async (data: { name: string; phone?: string }): Promise<boolean> => {
+    const token = localStorage.getItem("token")
+    const { ok, data: res } = await apiFetch("/api/auth/me", {
+      method: "PUT", body: JSON.stringify(data),
+    }, token)
+    if (ok && res.success) {
+      setUser(prev => prev ? { ...prev, ...data } : prev)
+      addNotification({ type: "success", title: "Profil mis à jour", message: "Vos informations ont été enregistrées." })
+      return true
+    }
+    addNotification({ type: "error", title: "Erreur", message: res.error || "Impossible de mettre à jour le profil" })
+    return false
+  }
+
+  // ─── Nouveau: changePassword ──────────────────────────────────────────────
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    const token = localStorage.getItem("token")
+    const { ok, data: res } = await apiFetch("/api/auth/change-password", {
+      method: "POST", body: JSON.stringify({ currentPassword, newPassword }),
+    }, token)
+    if (ok && res.success) {
+      addNotification({ type: "success", title: "Mot de passe modifié", message: "Votre mot de passe a été changé avec succès." })
+      return true
+    }
+    addNotification({ type: "error", title: "Erreur", message: res.error || "Mot de passe actuel incorrect" })
+    return false
   }
 
   return (
     <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      isLoading,
-      login,
-      register,
-      logout,
-      addLoyaltyPoints,
-      updateUser,
+      user, isAuthenticated: !!user, isLoading,
+      login, register, logout,
+      addLoyaltyPoints, updateUser,
+      updateProfile, changePassword,
     }}>
       {children}
     </AuthContext.Provider>
