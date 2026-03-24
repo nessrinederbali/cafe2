@@ -24,6 +24,9 @@ export function CartDialog({ open, onClose, cart, setCart, decrementMenuItemQuan
   const { addNotification } = useNotification()
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
+  const [promoCode, setPromoCode]     = useState("")
+  const [promoData, setPromoData]     = useState<any>(null)
+  const [promoLoading, setPromoLoading] = useState(false)
 
   const total = cart.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0)
 
@@ -34,6 +37,35 @@ export function CartDialog({ open, onClose, cart, setCart, decrementMenuItemQuan
       setCart(cart.map((c) => (c.item.id === itemId ? { ...c, quantity: newQuantity } : c)))
     }
   }
+
+  const applyPromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`${API}/api/promotions/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ code: promoCode.toUpperCase(), order_total: total }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPromoData(data.data)
+        addNotification({ type: "success", title: "Code appliqué !", message: `Réduction de ${data.data.discount.toFixed(2)} TND` })
+      } else {
+        setPromoData(null)
+        addNotification({ type: "error", title: "Code invalide", message: data.error })
+      }
+    } catch {
+      addNotification({ type: "error", title: "Erreur", message: "Impossible de vérifier le code" })
+    } finally {
+      setPromoLoading(false)
+    }
+  }
+
+  const removePromo = () => { setPromoData(null); setPromoCode("") }
+
+  const finalTotal = promoData ? promoData.final_total : total
 
   const handleCheckout = async () => {
     if (cart.length === 0) return
@@ -70,7 +102,7 @@ export function CartDialog({ open, onClose, cart, setCart, decrementMenuItemQuan
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, promo_code: promoData?.code }),
       })
 
       const data = await res.json()
@@ -78,7 +110,7 @@ export function CartDialog({ open, onClose, cart, setCart, decrementMenuItemQuan
 
       if (res.ok && data.success) {
         const pointsEarned = data.data.loyalty_points_earned ?? Math.floor(total)
-        addLoyaltyPoints(pointsEarned, total)
+        addLoyaltyPoints(pointsEarned, finalTotal)
 
         // Décrémenter quantity de chaque menu item commandé
         for (const { item, quantity } of cart) {
@@ -185,17 +217,55 @@ export function CartDialog({ open, onClose, cart, setCart, decrementMenuItemQuan
                 {isAuthenticated && user && (
                   <div className="flex items-center justify-between text-sm text-green-600">
                     <span>Points de fidélité à gagner</span>
-                    <span className="font-semibold">+{Math.floor(total)} points</span>
+                    <span className="font-semibold">+{Math.floor(finalTotal)} points</span>
+                  </div>
+                )}
+                {promoData && (
+                  <div className="flex items-center justify-between text-sm text-green-600">
+                    <span>Code promo ({promoData.code})</span>
+                    <span className="font-semibold">-{promoData.discount.toFixed(2)} TND</span>
                   </div>
                 )}
                 <div className="border-t border-amber-200 pt-2">
                   <div className="flex items-center justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-amber-600">{total.toFixed(2)} TND</span>
+                    <span className="text-amber-600">{finalTotal.toFixed(2)} TND</span>
                   </div>
                 </div>
               </div>
             </Card>
+
+            {/* Code promo */}
+            {isAuthenticated && user && (
+              <div className="space-y-2">
+                {promoData ? (
+                  <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold text-green-700">✅ {promoData.code}</p>
+                      <p className="text-xs text-green-600">-{promoData.discount.toFixed(2)} TND</p>
+                    </div>
+                    <button onClick={removePromo} className="text-xs text-red-500 hover:underline">Retirer</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm uppercase placeholder:normal-case placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Code promo (optionnel)"
+                      value={promoCode}
+                      onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === "Enter" && applyPromo()}
+                    />
+                    <button
+                      onClick={applyPromo}
+                      disabled={promoLoading || !promoCode.trim()}
+                      className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {promoLoading ? "..." : "Appliquer"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {!isAuthenticated || !user ? (
               <div className="space-y-3">

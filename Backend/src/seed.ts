@@ -6,7 +6,7 @@ import { Order }              from "./models/Order";
 import { StockMovement }      from "./models/StockMovement";
 import { Supplier }           from "./models/Supplier";
 import { Batch }              from "./models/Batch";
-import { StockItem }          from "./models/StockItem";
+import { StockItem }          from "./models/Stockitem";
 import { IngredientCategory } from "./models/IngredientCategory";
 import { Reward }             from "./models/Reward";
 

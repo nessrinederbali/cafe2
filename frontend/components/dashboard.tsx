@@ -15,6 +15,7 @@ import { ClientsLoyaltyManagement } from "./clients-loyalty-management"
 import { RewardsManagement } from "./rewards-management"
 import { OrdersManagement } from "./orders-management"
 import { EmployeesManagement } from "./employees-management"
+import { PromotionsManagement } from "./promotions-management"
 import { RapportPDF } from "./rapport-pdf"
 import { AdvancedStats } from "./advanced-stats"
 import { StockStats } from "./stock-stats"
@@ -386,7 +387,7 @@ function DashboardContent() {
 }
 
 // ── Main Dashboard (container + navigation) ───────────────────────────────────
-type NavItem = "dashboard" | "articles" | "categories" | "suppliers" | "batches" | "menu" | "clients" | "rewards" | "orders" | "employees"
+type NavItem = "dashboard" | "articles" | "categories" | "suppliers" | "batches" | "menu" | "clients" | "rewards" | "orders" | "employees" | "promotions"
 
 export function Dashboard() {
   const [currentView, setCurrentView]       = useState<NavItem>("dashboard")
@@ -442,9 +443,10 @@ export function Dashboard() {
           {currentView === "clients" && isAdmin && <ClientsLoyaltyManagement />}
           {currentView === "rewards" && isAdmin && <RewardsManagement />}
           {currentView === "orders"     && isAdmin && <OrdersManagement />}
-          {currentView === "employees"  && isAdmin && <EmployeesManagement />}
+          {currentView === "employees"   && isAdmin && <EmployeesManagement />}
+          {currentView === "promotions"  && isAdmin && <PromotionsManagement />}
 
-          {!isAdmin && ["categories","suppliers","menu","clients","rewards","orders","employees"].includes(currentView) && (
+          {!isAdmin && ["categories","suppliers","menu","clients","rewards","orders","employees","promotions"].includes(currentView) && (
             <div className="flex min-h-[400px] items-center justify-center">
               <div className="text-center">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">

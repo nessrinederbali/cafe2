@@ -4,10 +4,10 @@ import { Button } from "./ui/button"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboardIcon, PackageIcon, TagIcon, TruckIcon, XIcon,
-  ChefHatIcon, MenuIcon, UsersIcon, GiftIcon, ShoppingBagIcon, UserCogIcon,
+  ChefHatIcon, MenuIcon, UsersIcon, GiftIcon, ShoppingBagIcon, UserCogIcon, TicketIcon,
 } from "lucide-react"
 
-type NavItem = "dashboard" | "articles" | "categories" | "suppliers" | "batches" | "menu" | "clients" | "rewards" | "orders" | "employees"
+type NavItem = "dashboard" | "articles" | "categories" | "suppliers" | "batches" | "menu" | "clients" | "rewards" | "orders" | "employees" | "promotions"
 
 interface SidebarProps {
   currentView: NavItem
@@ -27,7 +27,8 @@ export function Sidebar({ currentView, onViewChange, isOpen, onClose, isAdmin }:
     { id: "orders"    as const, label: "Commandes",         icon: ShoppingBagIcon,      adminOnly: true  },
     { id: "clients"   as const, label: "Clients & Fidélité",icon: UsersIcon,            adminOnly: true  },
     { id: "rewards"   as const, label: "Récompenses",       icon: GiftIcon,             adminOnly: true  },
-    { id: "employees" as const, label: "Employés",            icon: UserCogIcon,          adminOnly: true  },
+    { id: "employees"  as const, label: "Employés",           icon: UserCogIcon,           adminOnly: true  },
+    { id: "promotions" as const, label: "Promotions",          icon: TicketIcon,            adminOnly: true  },
   ]
 
   const handleNavClick = (view: NavItem) => { onViewChange(view); onClose() }

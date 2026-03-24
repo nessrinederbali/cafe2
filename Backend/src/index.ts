@@ -19,7 +19,9 @@ import stockItems         from "./routes/stock-items";
 import ingredientCats     from "./routes/ingredient-categories";
 import rewards            from "./routes/rewards";
 import reports            from "./routes/reports";
+import { startCronJobs } from "./services/Cron";
 import employees          from "./routes/employees";
+import promotions         from "./routes/promotions";
 
 const app = new Hono();
 
@@ -48,12 +50,16 @@ app.route("/api/ingredient-categories", ingredientCats);
 app.route("/api/rewards",               rewards);
 app.route("/api/reports",               reports);
 app.route("/api/employees",             employees);
+app.route("/api/promotions",            promotions);
 
 app.notFound((c) => c.json({ success: false, error: "Route non trouvée" }, 404));
 app.onError((err, c) => {
   console.error("❌ Error:", err.message);
   return c.json({ success: false, error: err.message }, 500);
 });
+
+// Démarrer les cron jobs (alertes email automatiques)
+startCronJobs()
 
 const PORT = Number(process.env.PORT) || 3001;
 export default { port: PORT, fetch: app.fetch };
